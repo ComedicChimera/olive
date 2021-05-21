@@ -3,6 +3,7 @@ package olive
 import (
 	"fmt"
 	"log"
+	"os"
 )
 
 // This file outlines the user-facing API of Olive.
@@ -199,7 +200,10 @@ func (c *Command) addArg(arg Argument) {
 func (c *Command) EnableHelp() {
 	if _, ok := c.args["help"]; !ok {
 		flag := c.AddFlag("help", "h", "Get help")
-		flag.action = c.Help
+		flag.action = func() {
+			c.Help()
+			os.Exit(0)
+		}
 	}
 }
 

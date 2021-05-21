@@ -19,7 +19,7 @@ version of Go that supports modules.
 
 ## Quickstart
 
-Once you have installed Olive, using it is trivial.  Here is a quick sample of
+Once you have installed Olive, using it is easy.  Here is a quick sample of
 parsing command line arguments for a simple application.
 
 ```go
@@ -71,7 +71,7 @@ A sample call of this program would look like:
 
 ## Documentation
 
-For more information on how to use Olive, check out the [wiki](). *insert link*
+For more specific information on how to use Olive, check out the [wiki](https://github.com/ComedicChimera/olive/wiki).
 
 ## Contributing
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/bits"
+	"os"
 	"strconv"
 )
 
@@ -266,7 +267,10 @@ func newCommand(name, desc string, helpEnabled bool) *Command {
 
 	if helpEnabled {
 		f := c.AddFlag("help", "h", "Get help")
-		f.action = c.Help
+		f.action = func() {
+			c.Help()
+			os.Exit(0)
+		}
 	}
 
 	return c
