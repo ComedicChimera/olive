@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"olive"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/ComedicChimera/olive"
 
 	"bou.ke/monkey"
 )
