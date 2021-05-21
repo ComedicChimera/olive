@@ -1,8 +1,16 @@
 package olive_test
 
 import (
+	"errors"
+	"fmt"
+	"log"
+	"math"
 	"olive"
+	"os"
+	"reflect"
 	"testing"
+
+	"bou.ke/monkey"
 )
 
 func TestCorrectFlags(t *testing.T) {
@@ -22,15 +30,15 @@ func TestCorrectFlags(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
 
-	if !result.GetFlag("flag1") {
+	if !result.HasFlag("flag1") {
 		t.Fatal("missing flag1")
 	}
 
-	if !result.GetFlag("flag2") {
+	if !result.HasFlag("flag2") {
 		t.Fatal("missing flag2")
 	}
 
-	if result.GetFlag("flag3") {
+	if result.HasFlag("flag3") {
 		t.Fatal("flag3 set")
 	}
 }
@@ -112,11 +120,11 @@ func TestCorrectFlagsandArgs(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
 
-	if !result.GetFlag("flag1") {
+	if !result.HasFlag("flag1") {
 		t.Fatal("missing flag: `flag1`")
 	}
 
-	if result.GetFlag("flag2") {
+	if result.HasFlag("flag2") {
 		t.Fatal("unexpected flag: `flag2`")
 	}
 
@@ -137,11 +145,11 @@ func TestCorrectFlagsandArgs(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
 
-	if !result.GetFlag("flag2") {
+	if !result.HasFlag("flag2") {
 		t.Fatal("missing flag: `flag2`")
 	}
 
-	if result.GetFlag("flag1") {
+	if result.HasFlag("flag1") {
 		t.Fatal("unexpected flag: `flag1`")
 	}
 
@@ -243,6 +251,8 @@ func TestCorrectPrimaryArguments(t *testing.T) {
 	} else {
 		t.Fatal("missing subcommand `subc2` on result")
 	}
+
+	t.Log(c.HelpMessage())
 }
 
 func TestOptionalSubcommand(t *testing.T) {
@@ -318,7 +328,7 @@ func TestCorrectMixedCLI(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
 
-	if !result.GetFlag("verbose") {
+	if !result.HasFlag("verbose") {
 		t.Fatal("missing flag `verbose`")
 	}
 
@@ -345,6 +355,8 @@ func TestCorrectMixedCLI(t *testing.T) {
 	} else {
 		t.Fatal("missing subcommand `mod`")
 	}
+
+	t.Log(cli.HelpMessage())
 }
 
 func TestBadInput(t *testing.T) {
@@ -390,5 +402,348 @@ func TestBadInput(t *testing.T) {
 	_, err = olive.ParseArgs(cli, []string{"olive", "mod", "init", "-int=10"})
 	if err == nil {
 		t.Fatalf("missing no primary arg value error")
+	}
+
+	_, err = olive.ParseArgs(cli, []string{"olive", "-f", "mod"})
+	if err == nil {
+		t.Fatal("missing unexpected subcommand error")
+	}
+}
+
+func TestBadInput2(t *testing.T) {
+	cli := olive.NewCLI("olive", "", true)
+
+	cli.AddPrimaryArg("primary", "")
+	cli.AddFlag("flag1", "f1", "")
+	cli.AddSelectorArg("sel", "s", "", true, []string{"val1", "val2", "val3"})
+
+	_, err := olive.ParseArgs(cli, []string{"olive", "prim1", "prim2"})
+	if err == nil {
+		t.Fatal("missing multiple primary arguments error")
+	}
+
+	result, err := olive.ParseArgs(cli, []string{"olive", "-f1", "prim"})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	if !result.HasFlag("flag1") {
+		t.Fatal("missing flag `flag1`")
+	}
+
+	if val, ok := result.PrimaryArg(); ok {
+		if val != "prim" {
+			t.Fatalf("unexpected primary argument value: `%s`", val)
+		}
+	} else {
+		t.Fatal("missing primary argument")
+	}
+
+	_, err = olive.ParseArgs(cli, []string{"olive", "-f1", "--flag1"})
+	if err == nil {
+		t.Fatal("missing flag set multiple times error")
+	}
+
+	_, err = olive.ParseArgs(cli, []string{"olive", "--sel=val1 -s=val2"})
+	if err == nil {
+		t.Fatal("missing arg set multiple times error")
+	}
+
+	_, err = olive.ParseArgs(cli, []string{"olive", "-s=val4"})
+	if err == nil {
+		t.Fatal("missing invalid selection error")
+	}
+
+	_, err = olive.ParseArgs(cli, []string{"olive", "--v"})
+	if err == nil {
+		t.Fatal("missing unknown flag error")
+	}
+
+	_, err = olive.ParseArgs(cli, []string{"olive", "--f=10.2"})
+	if err == nil {
+		t.Fatal("missing unknown argument error")
+	}
+}
+
+func TestHelp(t *testing.T) {
+	monkey.Patch(os.Exit, func(int) {
+		t.Log("help exited application")
+	})
+
+	defer monkey.Unpatch(os.Exit)
+
+	monkey.Patch(fmt.Println, func(a ...interface{}) (int, error) {
+		t.Log("displaying help")
+		return 0, nil
+	})
+
+	defer monkey.Unpatch(fmt.Println)
+
+	cli := olive.NewCLI("olive", "", true)
+
+	result, err := olive.ParseArgs(cli, []string{"olive", "-h"})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	if !result.HasFlag("help") {
+		t.Fatal("missing help flag")
+	}
+
+	cli.DisableHelp()
+
+	_, err = olive.ParseArgs(cli, []string{"olive", "--help"})
+	if err == nil {
+		t.Fatal("missing unknown flag error")
+	}
+
+	cli.EnableHelp()
+
+	result, err = olive.ParseArgs(cli, []string{"olive", "-h"})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	if !result.HasFlag("help") {
+		t.Fatal("missing help flag")
+	}
+
+	cli2 := olive.NewCLI("olive2", "", false)
+
+	_, err = olive.ParseArgs(cli2, []string{"olive", "--help"})
+	if err == nil {
+		t.Fatal("missing unknown flag error")
+	}
+
+	cli2.EnableHelp()
+
+	result, err = olive.ParseArgs(cli2, []string{"olive", "-h"})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	if !result.HasFlag("help") {
+		t.Fatal("missing help flag")
+	}
+}
+
+func TestBadConfig(t *testing.T) {
+	logFatalCount := 0
+
+	monkey.Patch(log.Fatalf, func(format string, v ...interface{}) {
+		t.Log(format)
+		logFatalCount++
+	})
+
+	defer monkey.Unpatch(log.Fatalf)
+
+	// we don't technically care if the CLI object gets screwed up -- just that
+	// we proked the error
+	cli := olive.NewCLI("olive", "", true)
+
+	cli.AddFlag("help", "he", "") // fatal 1
+	cli.AddFlag("he", "h", "")    // fatal 2
+
+	cli.AddIntArg("int", "i", "", true)
+	cli.AddFloatArg("int", "in", "", true)    // fatal 3
+	cli.AddStringArg("string", "i", "", true) // fatal 4
+
+	cli.AddPrimaryArg("p", "")
+
+	cli.AddSubcommand("cheeky", "", true) // fatal 5
+
+	cli = olive.NewCLI("olive2", "", true)
+	cli.AddSubcommand("bug", "", true)
+
+	cli.AddSubcommand("bug", "", true) // fatal 6
+
+	cli.AddPrimaryArg("b", "") // fatal 7
+
+	if logFatalCount != 7 {
+		t.Fatalf("expected 7 fatal errors: received %d", logFatalCount)
+	}
+}
+
+func TestValidatorsandDefaults(t *testing.T) {
+	cli := olive.NewCLI("olive", "", false)
+
+	ia := cli.AddIntArg("int", "i", "", false)
+	ia.SetValidator(func(x int) error {
+		if x%2 == 1 {
+			return errors.New("must be even")
+		}
+
+		return nil
+	})
+	ia.SetDefaultValue(0)
+
+	fa := cli.AddFloatArg("float", "f", "", false)
+	fa.SetValidator(func(x float64) error {
+		if math.Mod(x, 1) >= 0.5 {
+			return errors.New("must round down")
+		}
+
+		return nil
+	})
+	fa.SetDefaultValue(0.2)
+
+	sa := cli.AddStringArg("str", "s", "", false)
+	sa.SetValidator(func(x string) error {
+		if len(x) > 5 {
+			return errors.New("must be shorter than 6 chars")
+		}
+
+		return nil
+	})
+	sa.SetDefaultValue("val")
+
+	sea := cli.AddSelectorArg("sel", "se", "", false, []string{"val1", "val2", "badVal"})
+	sea.SetValidator(func(x string) error {
+		if x == "badVal" {
+			return errors.New("bad val")
+		}
+
+		return nil
+	})
+	sea.SetDefaultValue("val1")
+
+	// all defaults
+	result, err := olive.ParseArgs(cli, []string{"olive"})
+	if err != nil {
+		t.Fatalf("unexpected error %s", err.Error())
+	}
+
+	if !reflect.DeepEqual(result.Arguments, map[string]interface{}{
+		"int":   0,
+		"float": 0.2,
+		"str":   "val",
+		"sel":   "val1",
+	}) {
+		t.Fatalf("bad default argument fill ins")
+	}
+
+	result, err = olive.ParseArgs(cli, []string{"olive", "-i=2", "-f=0.3", "-s=v", "-se=val2"})
+	if err != nil {
+		t.Fatalf("unexpected error %s", err.Error())
+	}
+
+	if !reflect.DeepEqual(result.Arguments, map[string]interface{}{
+		"int":   2,
+		"float": 0.3,
+		"str":   "v",
+		"sel":   "val2",
+	}) {
+		t.Fatalf("bad argument fill ins")
+	}
+
+	_, err = olive.ParseArgs(cli, []string{"olive", "-i=5"})
+	if err == nil {
+		t.Fatalf("Int validator didn't catch")
+	}
+
+	_, err = olive.ParseArgs(cli, []string{"olive", "-f=0.8"})
+	if err == nil {
+		t.Fatalf("Float validator didn't catch")
+	}
+
+	_, err = olive.ParseArgs(cli, []string{"olive", "-s=abcdef"})
+	if err == nil {
+		t.Fatalf("String validator didn't catch")
+	}
+
+	_, err = olive.ParseArgs(cli, []string{"olive", "-se=badVal"})
+	if err == nil {
+		t.Fatalf("Selector validator didn't catch")
+	}
+}
+
+func TestDisplayInterf(t *testing.T) {
+	cli := olive.NewCLI("olive", "", false)
+
+	f := cli.AddFlag("flag", "f", "Test description")
+	if f.Name() != "flag" {
+		t.Fatalf("Flag should have name `flag` not `%s`", f.Name())
+	}
+
+	if f.ShortName() != "f" {
+		t.Fatalf("Flag should have short name `f` not `%s`", f.ShortName())
+	}
+
+	if f.Description() != "Test description" {
+		t.Fatalf("Flag should have description `Test description` not `%s`", f.Description())
+	}
+
+	a := cli.AddIntArg("int", "i", "Int description", true)
+	if a.Name() != "int" {
+		t.Fatalf("Argument should have name `int` not `%s`", f.Name())
+	}
+
+	if a.ShortName() != "i" {
+		t.Fatalf("Argument should have short name `i` not `%s`", f.ShortName())
+	}
+
+	if a.Description() != "Int description" {
+		t.Fatalf("Argument should have description `Int description` not `%s`", f.Description())
+	}
+
+	if !a.Required() {
+		t.Fatal("Argument should be marked as required")
+	}
+}
+
+func TestBadDefaultValues(t *testing.T) {
+	logFatalCount := 0
+
+	monkey.Patch(log.Fatalf, func(format string, v ...interface{}) {
+		t.Log(format)
+		logFatalCount++
+	})
+
+	defer monkey.Unpatch(log.Fatalf)
+
+	cli := olive.NewCLI("olive", "", false)
+
+	ia := cli.AddIntArg("int", "i", "", false)
+	ia.SetValidator(func(x int) error {
+		if x%2 == 1 {
+			return errors.New("must be even")
+		}
+
+		return nil
+	})
+	ia.SetDefaultValue(1) // fatal 1
+
+	fa := cli.AddFloatArg("float", "f", "", false)
+	fa.SetValidator(func(x float64) error {
+		if math.Mod(x, 1) >= 0.5 {
+			return errors.New("must round down")
+		}
+
+		return nil
+	})
+	fa.SetDefaultValue(0.6) // fatal 2
+
+	sa := cli.AddStringArg("str", "s", "", false)
+	sa.SetValidator(func(x string) error {
+		if len(x) > 5 {
+			return errors.New("must be shorter than 6 chars")
+		}
+
+		return nil
+	})
+	sa.SetDefaultValue("abcdef") // fatal 3
+
+	sea := cli.AddSelectorArg("sel", "se", "", false, []string{"val1", "val2", "badVal"})
+	sea.SetValidator(func(x string) error {
+		if x == "badVal" {
+			return errors.New("bad val")
+		}
+
+		return nil
+	})
+	sea.SetDefaultValue("badVal") // fatal 4
+
+	if logFatalCount != 4 {
+		t.Fatalf("expected `4` fatal errors; received `%d`", logFatalCount)
 	}
 }

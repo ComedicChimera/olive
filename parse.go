@@ -167,7 +167,7 @@ func (ap *argParser) consume(arg string) error {
 			return fmt.Errorf("unknown subcommand: `%s`", arg)
 		}
 	} else {
-		return fmt.Errorf("unknown subcommand: `%s`", arg)
+		return fmt.Errorf("unexpected subcommand: `%s`", arg)
 	}
 
 	return nil

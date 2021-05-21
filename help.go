@@ -34,13 +34,13 @@ func (hb *helpBuilder) buildMessage() string {
 	hb.buildUsageLine()
 
 	if len(hb.c.subcommands) > 0 {
-		hb.b.WriteString("\n\nCommands:\n\n")
+		hb.b.WriteString("\nCommands:\n\n")
 
 		hb.buildSubcommandsList()
 	}
 
 	if hb.c.primaryArg != nil {
-		hb.b.WriteString("\n\nPrimary Argument:\n\n")
+		hb.b.WriteString("\nPrimary Argument:\n\n")
 
 		hb.b.WriteString(wordwrap.Indent(
 			fmt.Sprintf("%s   %s", hb.c.primaryArg.name, hb.c.primaryArg.desc), "    ", false),
@@ -48,13 +48,13 @@ func (hb *helpBuilder) buildMessage() string {
 	}
 
 	if len(hb.c.args) > 0 {
-		hb.b.WriteString("\n\nArguments:\n\n")
+		hb.b.WriteString("\nArguments:\n\n")
 
 		hb.buildArgumentsList()
 	}
 
 	if len(hb.c.flags) > 0 {
-		hb.b.WriteString("\n\nFlags:\n\n")
+		hb.b.WriteString("\nFlags:\n\n")
 
 		hb.buildFlagsList()
 	}
@@ -100,6 +100,8 @@ func (hb *helpBuilder) buildUsageLine() {
 		ub.WriteString(fmt.Sprintf("[-%s|--%s] ", flag.shortName, flag.name))
 	}
 
+	ub.WriteRune('\n')
+
 	hb.b.WriteString(wordwrap.Indent(ub.String(), "    ", true))
 }
 
@@ -123,6 +125,8 @@ func (hb *helpBuilder) buildSubcommandsList() {
 			"    "+cmd.Name+strings.Repeat(" ", maxCmdNameColLength-len(cmd.Name)),
 			false,
 		))
+
+		hb.b.WriteRune('\n')
 	}
 }
 
@@ -144,13 +148,15 @@ func (hb *helpBuilder) buildArgumentsList() {
 		hb.b.WriteString(wordwrap.Indent(
 			wdesc(arg.Description()),
 			fmt.Sprintf(
-				"    -%s, --%s%s",
-				arg.Name(),
+				"    -%s, --%s%s   ",
 				arg.ShortName(),
+				arg.Name(),
 				strings.Repeat(" ", maxArgNameColLength-len(arg.Name())-len(arg.ShortName())-5),
 			),
 			false,
 		))
+
+		hb.b.WriteRune('\n')
 	}
 }
 
@@ -172,12 +178,14 @@ func (hb *helpBuilder) buildFlagsList() {
 		hb.b.WriteString(wordwrap.Indent(
 			wdesc(flag.desc),
 			fmt.Sprintf(
-				"    -%s, --%s%s",
-				flag.name,
+				"    -%s, --%s%s   ",
 				flag.shortName,
+				flag.name,
 				strings.Repeat(" ", maxFlagNameColLength-len(flag.name)-len(flag.shortName)-5),
 			),
 			false,
 		))
+
+		hb.b.WriteRune('\n')
 	}
 }

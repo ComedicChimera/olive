@@ -76,7 +76,11 @@ func ParseArgs(cli *Command, args []string) (*ArgParseResult, error) {
 // AddSubcommand adds a subcommand to the command
 func (c *Command) AddSubcommand(name, desc string, helpEnabled bool) *Command {
 	if c.primaryArg != nil {
-		log.Fatalf("Command `%s` cannot both take a primary argument and have subcommands", c.Name)
+		log.Fatalf("command `%s` cannot both take a primary argument and have subcommands", c.Name)
+	}
+
+	if _, ok := c.subcommands[name]; ok {
+		log.Fatalf("multiple subcommands named `%s`", name)
 	}
 
 	subc := newCommand(name, desc, helpEnabled)
@@ -88,7 +92,7 @@ func (c *Command) AddSubcommand(name, desc string, helpEnabled bool) *Command {
 // AddPrimaryArg adds a primary argument to the command
 func (c *Command) AddPrimaryArg(name, desc string) {
 	if len(c.subcommands) > 0 {
-		log.Fatalf("Command `%s` cannot both take a primary argument and have subcommands", c.Name)
+		log.Fatalf("command `%s` cannot both take a primary argument and have subcommands", c.Name)
 	}
 
 	c.primaryArg = &PrimaryArgument{name: name, desc: desc}
@@ -209,16 +213,16 @@ func (c *Command) EnableHelp() {
 
 // DisableHelp disables the help flag (`--help` or `-h`).
 func (c *Command) DisableHelp() {
-	if _, ok := c.args["help"]; ok {
-		delete(c.args, "help")
-		delete(c.argsByShortName, "h")
+	if _, ok := c.flags["help"]; ok {
+		delete(c.flags, "help")
+		delete(c.flagsByShortName, "h")
 	}
 }
 
 // -----------------------------------------------------------------------------
 
-// GetFlag checks if a flag has been set during argument parsing
-func (apr *ArgParseResult) GetFlag(name string) bool {
+// HasFlag checks if a flag has been set during argument parsing
+func (apr *ArgParseResult) HasFlag(name string) bool {
 	_, ok := apr.flags[name]
 	return ok
 }
@@ -238,4 +242,9 @@ func (apr *ArgParseResult) Subcommand() (string, *ArgParseResult, bool) {
 // Help displays the help message for a given command
 func (c *Command) Help() {
 	fmt.Println(getHelpMessage(c))
+}
+
+// HelpMessage returns the stringified help message for a given command
+func (c *Command) HelpMessage() string {
+	return getHelpMessage(c)
 }
