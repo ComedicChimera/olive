@@ -1,5 +1,7 @@
 # Olive
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/ComedicChimera/olive)](https://goreportcard.com/report/github.com/ComedicChimera/olive)
+
 Olive is a delightful, little argument parsing library for Golang designed to
 replace the builtin *flag* package.  Olive is lightweight, easy to use, and
 intuitive while still being powerful enough and customizable enough to suit
