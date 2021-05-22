@@ -93,7 +93,7 @@ func (hb *helpBuilder) buildUsageLine() {
 			argValue = vnamesB.String()[:vnamesB.Len()-1]
 		}
 
-		ub.WriteString(fmt.Sprintf("[%s|%s=<%s>] ", arg.ShortName(), arg.Name(), argValue))
+		ub.WriteString(fmt.Sprintf("[-%s|--%s=<%s>] ", arg.ShortName(), arg.Name(), argValue))
 	}
 
 	for _, flag := range hb.c.flags {
@@ -132,9 +132,14 @@ func (hb *helpBuilder) buildSubcommandsList() {
 
 func (hb *helpBuilder) buildArgumentsList() {
 	maxArgNameColLength := 0
+	maxShortNameLength := 0
 	for argName, arg := range hb.c.args {
 		if len(argName)+len(arg.ShortName()) > maxArgNameColLength {
 			maxArgNameColLength = len(argName) + len(arg.ShortName())
+		}
+
+		if len(arg.ShortName()) > maxShortNameLength {
+			maxShortNameLength = len(arg.ShortName())
 		}
 	}
 
@@ -148,8 +153,9 @@ func (hb *helpBuilder) buildArgumentsList() {
 		hb.b.WriteString(wordwrap.Indent(
 			wdesc(arg.Description()),
 			fmt.Sprintf(
-				"    -%s, --%s%s   ",
+				"    -%s,%s --%s%s   ",
 				arg.ShortName(),
+				strings.Repeat(" ", maxShortNameLength-len(arg.ShortName())),
 				arg.Name(),
 				strings.Repeat(" ", maxArgNameColLength-len(arg.Name())-len(arg.ShortName())-5),
 			),
@@ -162,9 +168,14 @@ func (hb *helpBuilder) buildArgumentsList() {
 
 func (hb *helpBuilder) buildFlagsList() {
 	maxFlagNameColLength := 0
+	maxShortNameLength := 0
 	for flagName, flag := range hb.c.flags {
 		if len(flagName)+len(flag.shortName) > maxFlagNameColLength {
 			maxFlagNameColLength = len(flagName) + len(flag.shortName)
+		}
+
+		if len(flag.shortName) > maxShortNameLength {
+			maxShortNameLength = len(flag.shortName)
 		}
 	}
 
@@ -178,8 +189,9 @@ func (hb *helpBuilder) buildFlagsList() {
 		hb.b.WriteString(wordwrap.Indent(
 			wdesc(flag.desc),
 			fmt.Sprintf(
-				"    -%s, --%s%s   ",
+				"    -%s,%s --%s%s   ",
 				flag.shortName,
+				strings.Repeat(" ", maxShortNameLength-len(flag.shortName)),
 				flag.name,
 				strings.Repeat(" ", maxFlagNameColLength-len(flag.name)-len(flag.shortName)-5),
 			),

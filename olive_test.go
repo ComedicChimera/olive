@@ -165,6 +165,8 @@ func TestCorrectFlagsandArgs(t *testing.T) {
 	if result.Arguments["flag1"].(string) != "test" {
 		t.Fatalf("expected value of `test` for argument `flag1`, not `%s`", result.Arguments["string"].(string))
 	}
+
+	t.Log(cli.HelpMessage())
 }
 
 func TestCorrectSubcommands(t *testing.T) {
@@ -217,7 +219,7 @@ func TestCorrectPrimaryArguments(t *testing.T) {
 	cli.AddSubcommand("subc1", "", true)
 
 	c := cli.AddSubcommand("subc2", "", true)
-	c.AddPrimaryArg("test", "")
+	c.AddPrimaryArg("test", "", false)
 
 	result, err := olive.ParseArgs(cli, []string{"olive", "subc1"})
 	if err != nil {
@@ -248,6 +250,19 @@ func TestCorrectPrimaryArguments(t *testing.T) {
 			}
 		} else {
 			t.Fatal("missing primary argument for command `subc2`")
+		}
+	} else {
+		t.Fatal("missing subcommand `subc2` on result")
+	}
+
+	result, err = olive.ParseArgs(cli, []string{"olive", "subc2"})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	if name, _, ok := result.Subcommand(); ok {
+		if name != "subc2" {
+			t.Fatalf("unexpected subcommand on result: `%s`", name)
 		}
 	} else {
 		t.Fatal("missing subcommand `subc2` on result")
@@ -289,14 +304,14 @@ func TestCorrectMixedCLI(t *testing.T) {
 	cli.AddSubcommand("version", "", true)
 
 	c := cli.AddSubcommand("build", "", true)
-	c.AddPrimaryArg("package-name", "")
+	c.AddPrimaryArg("package-name", "", true)
 	c.AddStringArg("profile", "p", "", false)
 	s := c.AddStringArg("output", "o", "", true)
 	s.SetDefaultValue("cool_path")
 
 	c2 := cli.AddSubcommand("mod", "", true)
 	c3 := c2.AddSubcommand("init", "", true)
-	c3.AddPrimaryArg("module-name", "")
+	c3.AddPrimaryArg("module-name", "", true)
 	c2.AddSubcommand("update", "", true)
 
 	result, err := olive.ParseArgs(cli, []string{"olive", "build", "-o=other_path", "package"})
@@ -368,14 +383,14 @@ func TestBadInput(t *testing.T) {
 	cli.AddSubcommand("version", "", true)
 
 	c := cli.AddSubcommand("build", "", true)
-	c.AddPrimaryArg("package-name", "")
+	c.AddPrimaryArg("package-name", "", true)
 	c.AddStringArg("profile", "p", "", false)
 	s := c.AddStringArg("output", "o", "", true)
 	s.SetDefaultValue("cool_path")
 
 	c2 := cli.AddSubcommand("mod", "", true)
 	c3 := c2.AddSubcommand("init", "", true)
-	c3.AddPrimaryArg("module-name", "")
+	c3.AddPrimaryArg("module-name", "", true)
 	c3.AddFlag("flag", "f", "")
 	c2.AddSubcommand("update", "", true)
 	c2.AddIntArg("int", "i", "", true)
@@ -400,7 +415,7 @@ func TestBadInput(t *testing.T) {
 		t.Fatalf("missing int flag error")
 	}
 
-	_, err = olive.ParseArgs(cli, []string{"olive", "mod", "init", "-int=10"})
+	_, err = olive.ParseArgs(cli, []string{"olive", "mod", "init", "--int=10"})
 	if err == nil {
 		t.Fatalf("missing no primary arg value error")
 	}
@@ -414,7 +429,7 @@ func TestBadInput(t *testing.T) {
 func TestBadInput2(t *testing.T) {
 	cli := olive.NewCLI("olive", "", true)
 
-	cli.AddPrimaryArg("primary", "")
+	cli.AddPrimaryArg("primary", "", true)
 	cli.AddFlag("flag1", "f1", "")
 	cli.AddSelectorArg("sel", "s", "", true, []string{"val1", "val2", "val3"})
 
@@ -549,7 +564,7 @@ func TestBadConfig(t *testing.T) {
 	cli.AddFloatArg("int", "in", "", true)    // fatal 3
 	cli.AddStringArg("string", "i", "", true) // fatal 4
 
-	cli.AddPrimaryArg("p", "")
+	cli.AddPrimaryArg("p", "", true)
 
 	cli.AddSubcommand("cheeky", "", true) // fatal 5
 
@@ -558,7 +573,7 @@ func TestBadConfig(t *testing.T) {
 
 	cli.AddSubcommand("bug", "", true) // fatal 6
 
-	cli.AddPrimaryArg("b", "") // fatal 7
+	cli.AddPrimaryArg("b", "", true) // fatal 7
 
 	if logFatalCount != 7 {
 		t.Fatalf("expected 7 fatal errors: received %d", logFatalCount)

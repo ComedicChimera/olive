@@ -58,6 +58,14 @@ func (ap *argParser) parse(args []string) (*ArgParseResult, error) {
 		return nil, fmt.Errorf("`%s` requires a subcommand", ap.currCommand().Name)
 	}
 
+	// since only the last command in the chain can have primary arguments
+	// (because a command cannot have both subcommands and primary arguments),
+	// we only have to check to see if the last command is missing a required
+	// primary argument
+	if ap.currCommand().primaryArg != nil && ap.currCommand().primaryArg.required && ap.currResult().primaryArg == "" {
+		return nil, fmt.Errorf("missing required primary argument `%s` for subcommand `%s`", ap.currCommand().Name, ap.currCommand().primaryArg.name)
+	}
+
 	// set all the default values of any unsupplied arguments; go in reverse
 	// order so most specific subcommand gets precedence
 	for i := len(ap.commandStack) - 1; i > -1; i-- {

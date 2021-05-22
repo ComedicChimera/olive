@@ -249,6 +249,22 @@ func (sea *SelectorArgument) checkValue(val string) (interface{}, error) {
 // Note that a command cannot both take a primary argument and subcommands.
 type PrimaryArgument struct {
 	name, desc string
+	required   bool
+}
+
+// Name returns the name of the primary argument
+func (pa *PrimaryArgument) Name() string {
+	return pa.name
+}
+
+// Description returns the description of the primary argument
+func (pa *PrimaryArgument) Description() string {
+	return pa.desc
+}
+
+// Required indicates whether or not this argument must be supplied
+func (pa *PrimaryArgument) Required() bool {
+	return pa.required
 }
 
 // -----------------------------------------------------------------------------

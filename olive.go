@@ -90,12 +90,12 @@ func (c *Command) AddSubcommand(name, desc string, helpEnabled bool) *Command {
 }
 
 // AddPrimaryArg adds a primary argument to the command
-func (c *Command) AddPrimaryArg(name, desc string) {
+func (c *Command) AddPrimaryArg(name, desc string, required bool) {
 	if len(c.subcommands) > 0 {
 		log.Fatalf("command `%s` cannot both take a primary argument and have subcommands", c.Name)
 	}
 
-	c.primaryArg = &PrimaryArgument{name: name, desc: desc}
+	c.primaryArg = &PrimaryArgument{name: name, desc: desc, required: required}
 }
 
 // AddFlag adds a flag to the command
